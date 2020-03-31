@@ -27,6 +27,7 @@ cmake ../ -DCMAKE_GENERATOR_PLATFORM=x64
 
 1. Building the `AudicaModDoorstop` `Visual Studio` project will output a `IPHLPAPI.dll`, which should be placed next to `Audica.exe` and `GameAssembly.dll`
 
-## Developing
+## Mod development
 
-After running the above steps, there will also be a `SampleMod` project, which is setup to output a DLL that you can place in the `Mods` folder. It's a silly mod that lets you throw your guns at the targets to shoot them, but it's complex enough to show off a lot of the functionality you will need for developting mods.
+If you're looking for how to create a mod, go over to https://github.com/Mettra/SampleAudicaMod!
+
