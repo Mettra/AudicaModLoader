@@ -19,9 +19,8 @@ This modloader works as a standalone DLL (`IPHLPAPI.dll`). It get loaded by Audi
 ```bash
 git clone https://github.com/Mettra/AudicaModLoader.git
 cd AudicaModLoader
-mkdir build
-cd build
-cmake ../ -DCMAKE_GENERATOR_PLATFORM=x64
+git submodule update --init --recursive
+./build.bat
 ```
 `AudicaModLoader.sln` should be generated under the `AudicaModLoader/build` folder.
 
