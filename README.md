@@ -8,6 +8,8 @@ A modloader for PC DLLs for Audica.
 
 This modloader works as a standalone DLL (`IPHLPAPI.dll`). It get loaded by Audica when it starts up, and then loads mods from the `Mods` directory (which it will create if it does not exist) and applies them to Audica.
 
+**NOTE: While you have the modloader installed, you won't be able to connect to the online leaderboards. Make to remove/rename `IPHLPAPI.dll` if you want to post high scores!**
+
 ### How to use it
 
 * Download the latest files from [the releases page](https://github.com/Mettra/AudicaModLoader/releases)
@@ -29,4 +31,3 @@ git submodule update --init --recursive
 ## Mod development
 
 If you're looking for how to create a mod, go over to https://github.com/Mettra/SampleAudicaMod!
-
