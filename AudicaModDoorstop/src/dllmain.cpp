@@ -1,8 +1,12 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
-#include "../shared/il2cpp/il2cpp_binding.h"
-#include "../shared/il2cpp/il2cpp_context.h"
+#include <il2cpp/il2cpp_binding.h>
+#include <il2cpp/il2cpp_context.h>
+#include <il2cpp/semver.h>
+
+semver MOD_LOADER_VERSION = { 1, 0, 0 };
+
 
 #define ADD_ORIGINAL(i, name) originalFunctions[i] = GetProcAddress(dll, #name)
 
@@ -131,13 +135,13 @@ void load_original_dll()
 {
 	char buffer[MAX_PATH];
 
-	// Get path to system dir and to IPHLPAPI.dll
+	// Get path to system dir and to winhttp.dll
 	GetSystemDirectoryA(buffer, MAX_PATH);
 
 	// Append DLL name
 	strcat_s(buffer, "\\winhttp.dll");
 
-	// Try to load the system's IPHLPAPI.dll, if pointer empty
+	// Try to load the system's winhttp.dll, if pointer empty
 	if (!mHinstDLL) {
 		mHinstDLL = LoadLibraryA(buffer);
 	}
@@ -160,6 +164,8 @@ if(!(test))                                  \
 std::unique_ptr<il2cpp_context> GlobalContext;
 
 void LoadMods() {
+	LOG("--------------------------------  Audica Mod Loader v%d.%d.%d --------------------------------\n", MOD_LOADER_VERSION.major, MOD_LOADER_VERSION.minor, MOD_LOADER_VERSION.patch);
+
 	if (!CreateDirectory(L"Mods/", NULL) && ERROR_ALREADY_EXISTS != GetLastError())
 	{
 		LOG("FAILED TO CREATE MODS DIRECTORY!\n");
@@ -215,16 +221,33 @@ void LoadMods() {
 		}
 
 		try {
-			auto func = reinterpret_cast<void(*)(il2cpp_binding &bindingCtx)>(loadCall);
+			auto func = reinterpret_cast<ModDeclaration(*)(il2cpp_binding &bindingCtx)>(loadCall);
 			if (func) {
-				func(GlobalContext->getBinding());
+				auto modDecl = func(GlobalContext->getBinding());
+
+				if (MOD_LOADER_VERSION.major != modDecl.bindingVersion.major) {
+					std::string message;
+					std::string header;
+
+					if (MOD_LOADER_VERSION.major > modDecl.bindingVersion.major) {
+						header = std::string() + "Update " + modDecl.modName;
+						message = std::string() + "Mod [" + modDecl.modName + "] depends on an older version of the mod loader. It needs to be updated to work with the new mod loader!";
+					}
+					else {
+						header = std::string() + "Update Mod Loader!";
+						message = std::string() + "Mod [" + modDecl.modName + "] requires a newer version of the mod loader in order to function!";
+					}
+
+					MessageBoxA(NULL, message.c_str(), header.c_str(), MB_OK | MB_ICONERROR);
+					ExitProcess(EXIT_FAILURE);
+				}
+
+				LOG("Loaded %s!\n", modDecl.modName);
 			}
 		}
 		catch (...) {
 			LOG("%ls: FAILED TO CALL 'registerHooks' FUNCTION!\n", path);
 		}
-
-		LOG("%ls: Loaded!\n", path);
 	} while (FindNextFileW(findHandle, &findData) != 0);
 
 
@@ -232,6 +255,7 @@ void LoadMods() {
 	GlobalContext->getBinding().setupHooks();
 
 	LOG("Loaded all mods!\n");
+	LOG("-------------------------------------------------------------------------------------------\n\n");
 }
 
 
