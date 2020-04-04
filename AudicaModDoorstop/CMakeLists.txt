@@ -24,7 +24,7 @@ set_target_properties(AudicaModDoorstop PROPERTIES
 )
 
 target_link_libraries(AudicaModDoorstop "${CMAKE_CURRENT_SOURCE_DIR}/lib/funchook.lib" "${CMAKE_CURRENT_SOURCE_DIR}/lib/funchook.lib")
-set_target_properties(AudicaModDoorstop PROPERTIES OUTPUT_NAME "IPHLPAPI")
+set_target_properties(AudicaModDoorstop PROPERTIES OUTPUT_NAME "winhttp")
 target_compile_definitions(AudicaModDoorstop 
 PUBLIC AUDICA_MOD_LOADER
 PUBLIC UNICODE
