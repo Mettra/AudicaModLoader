@@ -1,11 +1,11 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
-#include <il2cpp/il2cpp_binding.h>
-#include <il2cpp/il2cpp_context.h>
+#include "il2cpp_binding_internal.h"
+#include "il2cpp_context_internal.h"
 #include <il2cpp/semver.h>
 
-semver MOD_LOADER_VERSION = { 1, 0, 0 };
+semver MOD_LOADER_VERSION = BindingVersion;
 
 
 #define ADD_ORIGINAL(i, name) originalFunctions[i] = GetProcAddress(dll, #name)
@@ -161,7 +161,7 @@ if(!(test))                                  \
 	ExitProcess(EXIT_FAILURE); \
 }
 
-std::unique_ptr<il2cpp_context> GlobalContext;
+std::unique_ptr<il2cpp_context_internal> GlobalContext;
 
 void LoadMods() {
 	LOG("--------------------------------  Audica Mod Loader v%d.%d.%d --------------------------------\n", MOD_LOADER_VERSION.major, MOD_LOADER_VERSION.minor, MOD_LOADER_VERSION.patch);
@@ -199,7 +199,7 @@ void LoadMods() {
 		return;
 	}
 
-	GlobalContext = std::make_unique<il2cpp_context>(gameassemb);
+	GlobalContext = std::make_unique<il2cpp_context_internal>(gameassemb);
 
 	do
 	{
@@ -214,16 +214,18 @@ void LoadMods() {
 			LOG("%ls: Failed to find library!\n", path);
 			continue;
 		}
-		auto loadCall = GetProcAddress(lib, "registerHooks");
-		if (!loadCall) {
-			LOG("%ls: Failed to find load call!\n", path);
+
+		auto getModInfoCall = GetProcAddress(lib, "getModInfo");
+		if (!getModInfoCall) {
+			LOG("%ls: Failed to find `getModInfo` call!\n", path);
 			continue;
 		}
 
+		ModDeclaration modDecl;
 		try {
-			auto func = reinterpret_cast<ModDeclaration(*)(il2cpp_binding &bindingCtx)>(loadCall);
+			auto func = reinterpret_cast<ModDeclaration(*)()>(getModInfoCall);
 			if (func) {
-				auto modDecl = func(GlobalContext->getBinding());
+				modDecl = func();
 
 				if (MOD_LOADER_VERSION.major != modDecl.bindingVersion.major) {
 					std::string message;
@@ -241,18 +243,36 @@ void LoadMods() {
 					MessageBoxA(NULL, message.c_str(), header.c_str(), MB_OK | MB_ICONERROR);
 					ExitProcess(EXIT_FAILURE);
 				}
+			}
+		}
+		catch (...) {
+			LOG("%ls: FAILED WHEN CALLING 'getModInfo' FUNCTION!\n", path);
+			continue;
+		}
 
+
+		auto loadCall = GetProcAddress(lib, "registerHooks");
+		if (!loadCall) {
+			LOG("%ls: Failed to find load call!\n", path);
+			continue;
+		}
+
+		try {
+			auto func = reinterpret_cast<void(*)(il2cpp_binding &bindingCtx)>(loadCall);
+			if (func) {
+				func(GlobalContext->getBinding());
 				LOG("Loaded %s!\n", modDecl.modName);
 			}
 		}
 		catch (...) {
-			LOG("%ls: FAILED TO CALL 'registerHooks' FUNCTION!\n", path);
+			LOG("%ls: FAILED WHEN CALLING 'registerHooks' FUNCTION!\n", path);
+			continue;
 		}
 	} while (FindNextFileW(findHandle, &findData) != 0);
 
 
 	//Finished loaded mods, now install all the hooks
-	GlobalContext->getBinding().setupHooks();
+	static_cast<il2cpp_binding_internal&>(GlobalContext->getBinding()).setupHooks();
 
 	LOG("Loaded all mods!\n");
 	LOG("-------------------------------------------------------------------------------------------\n\n");
@@ -260,7 +280,6 @@ void LoadMods() {
 
 
 BOOL WINAPI DllMain(HMODULE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
-
 	mHinst = hinstDLL;
 	if (fdwReason == DLL_PROCESS_ATTACH) {
 		load_original_dll();
