@@ -227,19 +227,22 @@ void LoadMods() {
 			if (func) {
 				modDecl = func();
 
-				if (MOD_LOADER_VERSION.major != modDecl.bindingVersion.major) {
+				if (MOD_LOADER_VERSION < modDecl.bindingVersion) {
 					std::string message;
 					std::string header;
 
-					if (MOD_LOADER_VERSION.major > modDecl.bindingVersion.major) {
-						header = std::string() + "Update " + modDecl.modName;
-						message = std::string() + "Mod [" + modDecl.modName + "] depends on an older version of the mod loader. It needs to be updated to work with the new mod loader!";
-					}
-					else {
-						header = std::string() + "Update Mod Loader!";
-						message = std::string() + "Mod [" + modDecl.modName + "] requires a newer version of the mod loader in order to function!";
-					}
+					header = std::string() + "Update Mod Loader!";
+					message = std::string() + "Mod [" + modDecl.modName + "] requires a newer version of the mod loader in order to function!";
 
+					MessageBoxA(NULL, message.c_str(), header.c_str(), MB_OK | MB_ICONERROR);
+					ExitProcess(EXIT_FAILURE);
+				}
+
+				if (MOD_LOADER_VERSION.major != modDecl.bindingVersion.major) {
+					std::string message;
+					std::string header;
+					header = std::string() + "Update " + modDecl.modName;
+					message = std::string() + "Mod [" + modDecl.modName + "] depends on an older version of the mod loader. It needs to be updated to work with the new mod loader!";
 					MessageBoxA(NULL, message.c_str(), header.c_str(), MB_OK | MB_ICONERROR);
 					ExitProcess(EXIT_FAILURE);
 				}

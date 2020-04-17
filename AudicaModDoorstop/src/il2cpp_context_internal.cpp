@@ -28,6 +28,12 @@ namespace api {
 	static internal::Il2CppString(*il2cpp_string_new_len)(const char* str, uint32_t length);
 	static uint32_t(*il2cpp_array_length)(internal::Il2CppObject arr);
 	static uint32_t(*il2cpp_array_get_byte_length)(internal::Il2CppObject arr);
+	static internal::Il2CppClass*(*il2cpp_object_get_class)(internal::Il2CppObject obj);
+
+	static size_t(*il2cpp_image_get_class_count)(const internal::Il2CppImage * image);
+	static internal::Il2CppClass*(*il2cpp_image_get_class)(const internal::Il2CppImage * image, size_t idx);
+	static const char *(*il2cpp_class_get_name)(internal::Il2CppClass * klass);
+	static const char *(*il2cpp_class_get_namespace)(internal::Il2CppClass * klass);
 };
 
 ///////////////////////////////
@@ -117,6 +123,31 @@ il2cppapi::Class* _getClassFromField(const internal::FieldInfo* field) {
 	return &p.first->second;
 }
 
+il2cppapi::Class *_getClassFromObject(internal::Il2CppObject obj) {
+	auto klass = api::il2cpp_object_get_class(obj);
+	if (klass == nullptr) {
+		return nullptr;
+	}
+
+	auto namespaceName = api::il2cpp_class_get_name(klass);
+	auto className = api::il2cpp_class_get_namespace(klass);
+
+	std::string key = std::string(namespaceName) + "." + className;
+	auto it = GlobalContext->mClasses.find(key);
+	if (it != GlobalContext->mClasses.end()) {
+		if(klass != it->second) {
+			printf("FATAL: Retrieving class from object conflicted with already found class!");
+			exit(0);
+		}
+
+		return &it->second;
+	}
+
+	InternalClass newClass(*GlobalContext, klass);
+	auto p = GlobalContext->mClasses.emplace(std::make_pair(key, std::move(newClass)));
+	return &p.first->second;
+}
+
 
 il2cpp_context_internal::~il2cpp_context_internal() = default;
 
@@ -146,6 +177,13 @@ il2cpp_context_internal::il2cpp_context_internal(HMODULE gameAssemblyModule) {
 	*(void**)(&api::il2cpp_string_new_len) = GetProcAddress(gameAssemblyModule, "il2cpp_string_new_len");
 	*(void**)(&api::il2cpp_array_length) = GetProcAddress(gameAssemblyModule, "il2cpp_array_length");
 	*(void**)(&api::il2cpp_array_get_byte_length) = GetProcAddress(gameAssemblyModule, "il2cpp_array_get_byte_length");
+	*(void**)(&api::il2cpp_object_get_class) = GetProcAddress(gameAssemblyModule, "il2cpp_object_get_class");
+
+	*(void**)(&api::il2cpp_image_get_class_count) = GetProcAddress(gameAssemblyModule, "il2cpp_image_get_class_count");
+	*(void**)(&api::il2cpp_image_get_class) = GetProcAddress(gameAssemblyModule, "il2cpp_image_get_class");
+	*(void**)(&api::il2cpp_class_get_name) = GetProcAddress(gameAssemblyModule, "il2cpp_class_get_name");
+	*(void**)(&api::il2cpp_class_get_namespace) = GetProcAddress(gameAssemblyModule, "il2cpp_class_get_namespace");
+
 	//
 
 
@@ -153,6 +191,7 @@ il2cpp_context_internal::il2cpp_context_internal(HMODULE gameAssemblyModule) {
 	mGetBinding = _getBinding;
 	mGetClass = _getClass;
 	mGetClassFromField = _getClassFromField;
+	mGetClassFromObject = _getClassFromObject;
 
 	//Set all the member functions
 	this->il2cpp_class_get_field_from_name = api::il2cpp_class_get_field_from_name;
